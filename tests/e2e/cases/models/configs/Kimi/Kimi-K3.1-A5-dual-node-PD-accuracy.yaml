@@ -123,11 +123,11 @@ templates:
       - '{"kv_connector":"MooncakeConnectorV2","kv_role":"kv_consumer","kv_port":30100,"kv_connector_extra_config":{"prefill":{"dp_size":1,"tp_size":8,"pp_size":1},"decode":{"dp_size":1,"tp_size":8}}}'
 
 benchmarks:
-  acc_aime2025:
+  acc_gpqa:
     case_type: accuracy
-    dataset_path: vllm-ascend/aime2025
+    dataset_path_local: /mnt/share/g30086705/datasets/gpqa
     request_conf: vllm_api_general_chat
-    dataset_conf: aime2025/aime2025_gen_0_shot_chat_prompt
+    dataset_conf: gpqa/gpqa_gen_0_shot_cot_chat_prompt
     batch_size: 8
     max_out_len: 8192
     temperature: 0
