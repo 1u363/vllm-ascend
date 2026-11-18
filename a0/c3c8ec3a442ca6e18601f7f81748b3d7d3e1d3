@@ -1,0 +1,19 @@
+tests/e2e/cases/models/configs/Kimi/Kimi-K3.1-A5-dual-node-PD-accuracy.yaml
+  s_8b8414688d10f0::t_4cf6d6a24e9cab 2,5,7-32,38-81,83-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5+huawei.3",
+  "base_commit_sha": "a0c3c8ec3a442ca6e18601f7f81748b3d7d3e1d3",
+  "prompts": {},
+  "sessions": {
+    "s_8b8414688d10f0": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ed91-9c6b-7e03-8e83-6945f7efced4",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "g30086705 <g30086705@huawei.com>"
+    }
+  }
+}
