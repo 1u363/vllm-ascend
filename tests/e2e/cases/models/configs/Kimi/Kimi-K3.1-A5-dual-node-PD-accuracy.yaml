@@ -1,46 +1,126 @@
-# A5 accuracy simulation. Each TP8 node must fit one complete model replica.
 test_name: Kimi-K3.1-A5-dual-node-PD-accuracy
-model: &checkpoint /root/.cahce/modelscope/hub/models/Kimi-K3.1-EP256-uniform-20261116
+model: /root/.cahce/modelscope/hub/models/Kimi-K3.1-EP256-uniform-20261116
 num_nodes: 2
 npu_per_node: 8
-dp_load_balancing: internal
-# For bare-metal runs, set cluster_hosts in a local copy, in [prefill, decode] order.
-disaggregated_prefill:
-  enabled: true
-  prefiller_host_index: [0]
-  decoder_host_index: [1]
+dp_load_balancing: external
 
+routing:
+  type: "disaggregated_prefill"
+  groups:
+    prefiller: [ 0 ]
+    decoder: [ 1 ]
+
+config:
+  - node_index: 0
+    port_start: 7100
+    dp_rpc_port: 12321
+    dp_size: 1
+    dp_size_local: 1
+    dp_rank_start: 0
+    tp_size: 8
+    dp_address: "${NODE_0_IP}"
+
+  - node_index: 1
+    port_start: 7100
+    dp_rpc_port: 12321
+    dp_size: 1
+    dp_size_local: 1
+    dp_rank_start: 0
+    tp_size: 8
+    dp_address: "${NODE_1_IP}"
+
+# For bare-metal runs, set cluster_hosts in [prefill, decode] order.
 env_common: &env_common
-  MODEL_PATH: *checkpoint
-  SERVER_PORT: "8080"
   VLLM_USE_V2_MODEL_RUNNER: "1"
   HCCL_OP_EXPANSION_MODE: "CCU_SCHED"
   HCCL_BUFFSIZE: "800"
   PYTORCH_NPU_ALLOC_CONF: "expandable_segments:True"
+  ASCEND_RT_VISIBLE_DEVICES: "${VISIBLE_DEVICES}"
 
-deployment:
-  - envs:
-      <<: *env_common
-      KV_ROLE: kv_producer
-      KV_PORT: "30000"
-      BATCHED_TOKENS: "8192"
-    server_cmd: &serve >-
-      vllm serve "$MODEL_PATH"
-      --host 0.0.0.0 --port $SERVER_PORT
-      --tokenizer-mode kimi_k3 --reasoning-parser kimi_k3 --trust-remote-code
-      --tensor-parallel-size 8 --data-parallel-size 1 --enable-expert-parallel
-      --distributed-executor-backend mp --enforce-eager --seed 1024
-      --max-model-len 16384 --max-num-seqs 8 --max-num-batched-tokens $BATCHED_TOKENS
-      --block-size 768 --cp-kv-cache-interleave-size 768 --enable-prefix-caching
-      --kv-transfer-config
-      '{"kv_connector":"MooncakeConnectorV2","kv_role":"$KV_ROLE","kv_port":$KV_PORT,
-      "kv_connector_extra_config":{"prefill":{"dp_size":1,"tp_size":8,"pp_size":1},"decode":{"dp_size":1,"tp_size":8}}}'
-  - envs:
-      <<: *env_common
-      KV_ROLE: kv_consumer
-      KV_PORT: "30100"
-      BATCHED_TOKENS: "768"
-    server_cmd: *serve
+templates:
+  - node_index: 0
+    envs: *env_common
+    server_cmd_template:
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "${PORT}"
+      - --tensor-parallel-size
+      - "${TP_SIZE}"
+      - --data-parallel-size
+      - "${DP_SIZE}"
+      - --data-parallel-rank
+      - "${DP_RANK}"
+      - --data-parallel-address
+      - "${DP_ADDRESS}"
+      - --data-parallel-rpc-port
+      - "${DP_RPC_PORT}"
+      - --distributed-executor-backend
+      - "mp"
+      - --enable-expert-parallel
+      - --tokenizer-mode
+      - "kimi_k3"
+      - --reasoning-parser
+      - "kimi_k3"
+      - --trust-remote-code
+      - --enforce-eager
+      - --seed
+      - "1024"
+      - --max-model-len
+      - "16384"
+      - --max-num-seqs
+      - "8"
+      - --max-num-batched-tokens
+      - "8192"
+      - --block-size
+      - "768"
+      - --cp-kv-cache-interleave-size
+      - "768"
+      - --enable-prefix-caching
+      - --kv-transfer-config
+      - '{"kv_connector":"MooncakeConnectorV2","kv_role":"kv_producer","kv_port":30000,"kv_connector_extra_config":{"prefill":{"dp_size":1,"tp_size":8,"pp_size":1},"decode":{"dp_size":1,"tp_size":8}}}'
+
+  - node_index: 1
+    envs: *env_common
+    server_cmd_template:
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "${PORT}"
+      - --tensor-parallel-size
+      - "${TP_SIZE}"
+      - --data-parallel-size
+      - "${DP_SIZE}"
+      - --data-parallel-rank
+      - "${DP_RANK}"
+      - --data-parallel-address
+      - "${DP_ADDRESS}"
+      - --data-parallel-rpc-port
+      - "${DP_RPC_PORT}"
+      - --distributed-executor-backend
+      - "mp"
+      - --enable-expert-parallel
+      - --tokenizer-mode
+      - "kimi_k3"
+      - --reasoning-parser
+      - "kimi_k3"
+      - --trust-remote-code
+      - --enforce-eager
+      - --seed
+      - "1024"
+      - --max-model-len
+      - "16384"
+      - --max-num-seqs
+      - "8"
+      - --max-num-batched-tokens
+      - "768"
+      - --block-size
+      - "768"
+      - --cp-kv-cache-interleave-size
+      - "768"
+      - --enable-prefix-caching
+      - --kv-transfer-config
+      - '{"kv_connector":"MooncakeConnectorV2","kv_role":"kv_consumer","kv_port":30100,"kv_connector_extra_config":{"prefill":{"dp_size":1,"tp_size":8,"pp_size":1},"decode":{"dp_size":1,"tp_size":8}}}'
 
 benchmarks:
   acc_aime2025:
