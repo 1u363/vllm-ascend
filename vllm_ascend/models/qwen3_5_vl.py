@@ -46,7 +46,7 @@ from transformers.models.qwen2_vl.image_processing_qwen2_vl import (
     Qwen2VLImageProcessor,
     smart_resize,
 )
-from vllm.model_executor.layers.fusion.mm_input_norm import build_mm_input_norm
+from vllm.model_executor.layers.fusion.mm_input_norm import IdentityInputNorm, build_mm_input_norm
 from vllm.model_executor.models.qwen3_5 import (
     Qwen3_5ForConditionalGeneration,
     Qwen3_5MoeForConditionalGeneration,
@@ -60,6 +60,11 @@ from vllm.model_executor.models.qwen3_vl import (
 from vllm.model_executor.models.vision import run_dp_sharded_mrope_vision_model
 from vllm.multimodal import MULTIMODAL_REGISTRY
 from vllm.multimodal.inputs import MultiModalFieldConfig
+
+from vllm_ascend.models.qwen_gdn_recoverssm import (
+    gdn_mamba_state_dtype_from_config,
+    gdn_mamba_state_shape_from_config,
+)
 
 # Marker stored in the mm_kwargs dicts produced by select_encoder_cudagraph_items
 # once device-side preprocessing has been applied. The graph manager re-packs
@@ -205,6 +210,10 @@ class _AscendVLPreprocessMixin:
     def __init__(self, *, vllm_config, prefix="model"):
         super().__init__(vllm_config=vllm_config, prefix=prefix)
         self.input_norm = build_mm_input_norm(self.model_config)
+        # Ascend normalizes before the ViT, including encoder graph selection.
+        # Upstream also installs a normalizer inside the ViT as of v0.32;
+        # retain its dtype conversion but do not normalize our patches again.
+        self.visual.input_norm = IdentityInputNorm()
         vc = self.config.vision_config
         self._c = vc.in_channels
         self._ps = vc.patch_size
@@ -390,7 +399,13 @@ class _AscendVLPreprocessMixin:
     dummy_inputs=Qwen3VLDummyInputsBuilder,
 )
 class AscendQwen3_5ForConditionalGeneration(_AscendVLPreprocessMixin, Qwen3_5ForConditionalGeneration):
-    pass
+    @classmethod
+    def get_mamba_state_shape_from_config(cls, config):
+        return gdn_mamba_state_shape_from_config(config)
+
+    @classmethod
+    def get_mamba_state_dtype_from_config(cls, config):
+        return gdn_mamba_state_dtype_from_config(config)
 
 
 @MULTIMODAL_REGISTRY.register_processor(
@@ -399,4 +414,10 @@ class AscendQwen3_5ForConditionalGeneration(_AscendVLPreprocessMixin, Qwen3_5For
     dummy_inputs=Qwen3VLDummyInputsBuilder,
 )
 class AscendQwen3_5MoeForConditionalGeneration(_AscendVLPreprocessMixin, Qwen3_5MoeForConditionalGeneration):
-    pass
+    @classmethod
+    def get_mamba_state_shape_from_config(cls, config):
+        return gdn_mamba_state_shape_from_config(config)
+
+    @classmethod
+    def get_mamba_state_dtype_from_config(cls, config):
+        return gdn_mamba_state_dtype_from_config(config)

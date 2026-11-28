@@ -32,6 +32,7 @@ class AscendRequestState(RequestState):
         num_speculative_steps: int,
         vocab_size: int,
         device: torch.device,
+        use_dense_all_token_ids: bool = False,
     ):
         super().__init__(
             max_num_reqs,
@@ -40,6 +41,7 @@ class AscendRequestState(RequestState):
             num_speculative_steps,
             vocab_size,
             device,
+            use_dense_all_token_ids=use_dense_all_token_ids,
         )
         # Ascend attention needs a torch CPU view of the upstream NumPy state.
         # Sharing storage keeps both APIs coherent without duplicate writes.
