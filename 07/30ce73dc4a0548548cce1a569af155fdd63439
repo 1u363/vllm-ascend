@@ -1,0 +1,21 @@
+tests/SIT/cases/models/configs/Kimi/Kimi-K3.1-Pro-W4A8-E256-A5-1P1D-main.yaml
+  s_000abc8b64992e::t_260f1947db0ae2 1-201
+.github/workflows/configs/nightly_config.yaml
+  s_000abc8b64992e::t_260f1947db0ae2 316-321
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5+huawei.3",
+  "base_commit_sha": "0730ce73dc4a0548548cce1a569af155fdd63439",
+  "prompts": {},
+  "sessions": {
+    "s_000abc8b64992e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2170a-36b6-73a0-8531-6e543b1a669b",
+        "model": "gpt-6.2-astra"
+      },
+      "human_author": "g30086705 <g30086705@huawei.com>"
+    }
+  }
+}
